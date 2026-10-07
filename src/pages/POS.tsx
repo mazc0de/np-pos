@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Search, ShoppingCart, Trash2, User, CreditCard, Loader2, X, ScanLine, CheckCircle } from 'lucide-react';
 import { Receipt } from '../components/Receipt';
 import { BarcodeScanner } from '../components/BarcodeScanner';
+import { usePhysicalScanner } from '../hooks/usePhysicalScanner';
 
 export default function POS() {
   const { items, addItem, updateQuantity, removeItem, clearCart, getSubtotal } = useCartStore();
@@ -65,6 +66,8 @@ export default function POS() {
       scanTimeoutRef.current = null;
     }, 2000);
   };
+
+  usePhysicalScanner({ onScan: handleScanSuccess });
 
   const handleOpenPreview = () => {
     const amount = paymentMethod === 'Tunai' ? (Number(paymentAmount) || getSubtotal()) : getSubtotal();

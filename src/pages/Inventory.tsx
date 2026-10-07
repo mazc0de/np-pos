@@ -3,6 +3,7 @@ import { useProducts } from '../hooks/useProducts';
 import { supabase } from '../lib/supabaseClient';
 import { Search, Loader2, Plus, PenLine, X, Camera, Wand2 } from 'lucide-react';
 import { BarcodeScanner } from '../components/BarcodeScanner';
+import { usePhysicalScanner } from '../hooks/usePhysicalScanner';
 
 export default function Inventory() {
   const { products, loading, error } = useProducts();
@@ -19,6 +20,16 @@ export default function Inventory() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handlePhysicalScan = (barcode: string) => {
+    if (isAddingProduct) {
+      setNewProduct(prev => ({ ...prev, barcode }));
+    } else {
+      setSearchTerm(barcode);
+    }
+  };
+
+  usePhysicalScanner({ onScan: handlePhysicalScan });
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price);
