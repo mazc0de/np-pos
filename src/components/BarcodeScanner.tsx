@@ -17,21 +17,25 @@ export function BarcodeScanner({ onScanSuccess, onScanFailure }: BarcodeScannerP
     let startPromise: Promise<any> | null = null;
 
     try {
-      html5QrCode = new Html5Qrcode("reader", {
-        verbose: false,
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.QR_CODE,
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.CODE_39,
-          Html5QrcodeSupportedFormats.CODE_93,
-          Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.UPC_E,
-          Html5QrcodeSupportedFormats.ITF,
-          Html5QrcodeSupportedFormats.CODABAR,
-        ]
-      });
+      const createScanner = () => {
+        return new Html5Qrcode("reader", {
+          verbose: false,
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.CODE_93,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.ITF,
+            Html5QrcodeSupportedFormats.CODABAR,
+          ]
+        });
+      };
+
+      html5QrCode = createScanner();
       
       const config = {
         fps: 10,
@@ -65,7 +69,21 @@ export function BarcodeScanner({ onScanSuccess, onScanFailure }: BarcodeScannerP
         } catch (err1) {
           console.warn("High-res camera request failed, falling back to standard constraints:", err1);
           if (!isComponentMounted) return;
+          
           try {
+            if (html5QrCode?.isScanning) {
+              await html5QrCode.stop();
+            }
+            html5QrCode?.clear();
+          } catch (e) {
+            console.warn("Cleanup error (safe to ignore):", e);
+          }
+
+          if (!isComponentMounted) return;
+
+          try {
+            // Re-instantiate for attempt 2 to avoid "already under transition" error
+            html5QrCode = createScanner();
             // Attempt 2: Basic environment camera (fixes iPhone constraint errors)
             await html5QrCode!.start(
               { facingMode: "environment" },
