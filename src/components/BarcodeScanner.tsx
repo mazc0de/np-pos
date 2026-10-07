@@ -35,11 +35,20 @@ export function BarcodeScanner({ onScanSuccess, onScanFailure }: BarcodeScannerP
       
       // Auto start the scanner
       startPromise = html5QrCode.start(
-        { facingMode: "environment" }, // Use back camera if available
+        { 
+          facingMode: "environment",
+          width: { ideal: 1920 }, // Higher resolution for sharper distant scanning
+          height: { ideal: 1080 }
+        } as MediaTrackConstraints,
         {
           fps: 10,
-          qrbox: { width: 300, height: 150 },
-          // Removed aspectRatio: 1.0 to prevent cropping 1D barcodes
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            // Make the scanning box responsive, wide enough for 1D barcodes
+            return {
+              width: Math.floor(viewfinderWidth * 0.85),
+              height: Math.floor(Math.min(250, viewfinderHeight * 0.5))
+            };
+          },
         },
         (decodedText) => {
           // Success
