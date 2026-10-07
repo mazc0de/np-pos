@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Loader2 } from 'lucide-react';
 
 interface BarcodeScannerProps {
@@ -17,7 +17,21 @@ export function BarcodeScanner({ onScanSuccess, onScanFailure }: BarcodeScannerP
     let startPromise: Promise<any> | null = null;
 
     try {
-      html5QrCode = new Html5Qrcode("reader");
+      html5QrCode = new Html5Qrcode("reader", {
+        verbose: false,
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.CODE_93,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.ITF,
+          Html5QrcodeSupportedFormats.CODABAR,
+        ]
+      });
       
       // Auto start the scanner
       startPromise = html5QrCode.start(
@@ -25,7 +39,7 @@ export function BarcodeScanner({ onScanSuccess, onScanFailure }: BarcodeScannerP
         {
           fps: 10,
           qrbox: { width: 300, height: 150 },
-          aspectRatio: 1.0, // helps prevent distorted video shapes
+          // Removed aspectRatio: 1.0 to prevent cropping 1D barcodes
         },
         (decodedText) => {
           // Success
