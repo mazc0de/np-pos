@@ -12,38 +12,61 @@ export function BarcodeScanner({ onScanSuccess, onScanFailure }: BarcodeScannerP
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   useEffect(() => {
-    const html5QrCode = new Html5Qrcode("reader");
-    
-    // Auto start the scanner
-    html5QrCode.start(
-      { facingMode: "environment" }, // Use back camera if available
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 150 }
-      },
-      (decodedText) => {
-        // Success
-        onScanSuccess(decodedText);
-      },
-      (error) => {
-        // Failure (this fires very often when it doesn't find a code, so we ignore it usually)
-        if (onScanFailure) {
-          onScanFailure(error);
+    let isComponentMounted = true;
+    let html5QrCode: Html5Qrcode | null = null;
+    let startPromise: Promise<any> | null = null;
+
+    try {
+      html5QrCode = new Html5Qrcode("reader");
+      
+      // Auto start the scanner
+      startPromise = html5QrCode.start(
+        { facingMode: "environment" }, // Use back camera if available
+        {
+          fps: 10,
+          qrbox: { width: 300, height: 150 },
+          aspectRatio: 1.0, // helps prevent distorted video shapes
+        },
+        (decodedText) => {
+          // Success
+          if (isComponentMounted) onScanSuccess(decodedText);
+        },
+        (error) => {
+          // Failure (this fires very often when it doesn't find a code, so we ignore it usually)
+          if (isComponentMounted && onScanFailure) {
+            onScanFailure(error);
+          }
         }
-      }
-    ).then(() => {
-      setIsStarting(false);
-    }).catch((err) => {
-      setIsStarting(false);
-      setCameraError("Gagal mengakses kamera. Pastikan browser memiliki izin, atau buka melalui localhost/HTTPS.");
-      console.error(err);
-    });
+      );
+
+      startPromise.then(() => {
+        if (isComponentMounted) {
+          setIsStarting(false);
+        } else {
+          // Component unmounted while starting, stop it now
+          html5QrCode?.stop().then(() => html5QrCode?.clear()).catch(console.error);
+        }
+      }).catch((err) => {
+        if (isComponentMounted) {
+          setIsStarting(false);
+          setCameraError("Gagal mengakses kamera. Pastikan browser memiliki izin, atau buka melalui localhost/HTTPS.");
+          console.error(err);
+        }
+      });
+    } catch (e) {
+      console.error("Failed to initialize Html5Qrcode", e);
+    }
 
     return () => {
-      if (html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => {
-          html5QrCode.clear();
-        }).catch(err => console.error("Failed to stop scanner", err));
+      isComponentMounted = false;
+      if (html5QrCode) {
+        if (html5QrCode.isScanning) {
+          html5QrCode.stop().then(() => {
+            html5QrCode?.clear();
+          }).catch(err => console.error("Failed to stop scanner", err));
+        }
+        // If it's not scanning but startPromise is running, 
+        // the .then() block above will handle the cleanup.
       }
     };
   }, [onScanSuccess, onScanFailure]);
@@ -63,7 +86,18 @@ export function BarcodeScanner({ onScanSuccess, onScanFailure }: BarcodeScannerP
         </div>
       )}
 
-      <div id="reader" className="w-full h-full"></div>
+      <style>{`
+        #reader video {
+          object-fit: cover !important;
+          width: 100% !important;
+          border-radius: 0.75rem !important; /* rounded-xl */
+        }
+        /* If there's a duplicate video somehow due to React Strict Mode, hide it */
+        #reader video ~ video {
+          display: none !important;
+        }
+      `}</style>
+      <div id="reader" className="w-full mx-auto"></div>
     </div>
   );
 }

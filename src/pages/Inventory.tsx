@@ -284,16 +284,6 @@ export default function Inventory() {
                     {isScanning ? 'Tutup Kamera' : 'Scan Barcode'}
                   </button>
                 </div>
-                {isScanning && (
-                  <div className="mb-3">
-                    <BarcodeScanner 
-                      onScanSuccess={(decodedText) => {
-                        setNewProduct({...newProduct, barcode: decodedText, sku: newProduct.sku || decodedText});
-                        setIsScanning(false);
-                      }} 
-                    />
-                  </div>
-                )}
                 <input 
                   type="text" 
                   value={newProduct.barcode}
@@ -345,6 +335,30 @@ export default function Inventory() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+      
+      {/* Scanner Modal */}
+      {isScanning && (
+        <div className="fixed inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-4 z-[100] animate-in fade-in duration-200">
+          <div className="w-full max-w-lg flex justify-end mb-4">
+            <button 
+              onClick={() => setIsScanning(false)}
+              className="text-white hover:text-slate-300 bg-white/10 p-2 rounded-full backdrop-blur-sm transition-colors"
+            >
+              <X size={24} />
+            </button>
+          </div>
+          
+          <div className="w-full max-w-lg bg-black rounded-3xl overflow-hidden shadow-2xl relative">
+            <BarcodeScanner 
+              onScanSuccess={(decodedText) => {
+                setNewProduct({...newProduct, barcode: decodedText, sku: newProduct.sku || decodedText});
+                setIsScanning(false);
+              }} 
+            />
+          </div>
+          <p className="text-white/60 mt-6 text-sm">Arahkan kamera ke barcode produk</p>
         </div>
       )}
     </div>
