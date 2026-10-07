@@ -33,34 +33,53 @@ export function BarcodeScanner({ onScanSuccess, onScanFailure }: BarcodeScannerP
         ]
       });
       
-      // Auto start the scanner
-      startPromise = html5QrCode.start(
-        { 
-          facingMode: "environment",
-          width: { ideal: 1920 }, // Higher resolution for sharper distant scanning
-          height: { ideal: 1080 }
-        } as MediaTrackConstraints,
-        {
-          fps: 10,
-          qrbox: (viewfinderWidth, viewfinderHeight) => {
-            // Make the scanning box responsive, wide enough for 1D barcodes
-            return {
-              width: Math.floor(viewfinderWidth * 0.85),
-              height: Math.floor(Math.min(250, viewfinderHeight * 0.5))
-            };
-          },
+      const config = {
+        fps: 10,
+        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+          return {
+            width: Math.floor(viewfinderWidth * 0.85),
+            height: Math.floor(Math.min(250, viewfinderHeight * 0.5))
+          };
         },
-        (decodedText) => {
-          // Success
-          if (isComponentMounted) onScanSuccess(decodedText);
-        },
-        (error) => {
-          // Failure (this fires very often when it doesn't find a code, so we ignore it usually)
-          if (isComponentMounted && onScanFailure) {
-            onScanFailure(error);
+      };
+
+      const successCallback = (decodedText: string) => {
+        if (isComponentMounted) onScanSuccess(decodedText);
+      };
+
+      const errorCallback = (error: any) => {
+        if (isComponentMounted && onScanFailure) {
+          onScanFailure(error);
+        }
+      };
+
+      const startCamera = async () => {
+        try {
+          // Attempt 1: High resolution for better distant scanning
+          await html5QrCode!.start(
+            { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } as MediaTrackConstraints,
+            config,
+            successCallback,
+            errorCallback
+          );
+        } catch (err1) {
+          console.warn("High-res camera request failed, falling back to standard constraints:", err1);
+          if (!isComponentMounted) return;
+          try {
+            // Attempt 2: Basic environment camera (fixes iPhone constraint errors)
+            await html5QrCode!.start(
+              { facingMode: "environment" },
+              config,
+              successCallback,
+              errorCallback
+            );
+          } catch (err2) {
+            throw err2;
           }
         }
-      );
+      };
+
+      startPromise = startCamera();
 
       startPromise.then(() => {
         if (isComponentMounted) {
@@ -72,8 +91,8 @@ export function BarcodeScanner({ onScanSuccess, onScanFailure }: BarcodeScannerP
       }).catch((err) => {
         if (isComponentMounted) {
           setIsStarting(false);
-          setCameraError("Gagal mengakses kamera. Pastikan browser memiliki izin, atau buka melalui localhost/HTTPS.");
-          console.error(err);
+          setCameraError("Gagal mengakses kamera. Pastikan browser memiliki izin, atau buka melalui localhost/HTTPS. Error: " + (err?.message || err));
+          console.error("Camera start error:", err);
         }
       });
     } catch (e) {
